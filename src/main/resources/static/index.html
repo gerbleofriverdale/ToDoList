@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusFlow | Intelligent Task Management Suite</title>
+  <meta name="description" content="A modern, high-performance task management application with multi-user isolation, admin control, single & bulk operations, live timers, and Windows notifications.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Canvas for celebration confetti -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- In-app Toasts Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <h1>FocusFlow</h1>
+          <span>Smart Task Management & Productivity</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Windows Notification Toggle -->
+        <button id="btnNotifPermission" class="btn btn-secondary btn-sm btn-notif" title="Enable Windows Desktop Notifications">
+          <span id="notifIcon">🔔</span>
+          <span id="notifLabel">Windows Alerts</span>
+        </button>
+
+        <!-- Admin Dashboard Trigger (Shown only to admins) -->
+        <button id="btnOpenAdmin" class="btn btn-secondary btn-sm" style="display: none;">
+          <span>🛡️</span>
+          <span>Admin Panel</span>
+        </button>
+
+        <!-- Active User Profile Pill -->
+        <div id="userProfileBadge" class="user-badge" title="Click to Switch Account or Log In">
+          <div id="userAvatar" class="user-avatar">?</div>
+          <div>
+            <span id="userName" style="font-weight: 600;">Guest</span>
+            <span id="userRoleTag" class="user-role-tag role-user">User</span>
+          </div>
+        </div>
+
+        <!-- Auth Button (Login / Logout) -->
+        <button id="btnAuthAction" class="btn btn-secondary btn-sm">
+          <span>Switch / Log In</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Productivity Metrics Strip -->
+    <section class="dashboard-metrics" aria-label="Task Statistics">
+      <div class="metric-card">
+        <div class="metric-info">
+          <h4>Total Tasks</h4>
+          <div id="metricTotal" class="metric-num">0</div>
+        </div>
+        <div class="metric-icon total">📋</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h4>In Progress</h4>
+          <div id="metricRunning" class="metric-num">0</div>
+        </div>
+        <div class="metric-icon running">⏱️</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h4>Paused</h4>
+          <div id="metricPaused" class="metric-num">0</div>
+        </div>
+        <div class="metric-icon paused">⏸️</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h4>Completed</h4>
+          <div id="metricCompleted" class="metric-num">0</div>
+        </div>
+        <div class="metric-icon done">✨</div>
+      </div>
+    </section>
+
+    <!-- Toolbar: Search, Filters, Add Actions -->
+    <section class="toolbar">
+      <div class="toolbar-top">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search tasks by title or keyword..." autocomplete="off">
+        </div>
+
+        <div class="toolbar-buttons">
+          <button id="btnOpenBulkAdd" class="btn btn-secondary">
+            <span>📑</span>
+            <span>Bulk Add</span>
+          </button>
+          <button id="btnOpenSingleAdd" class="btn btn-primary">
+            <span>➕</span>
+            <span>New Task</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters Strip -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Status:</span>
+          <button class="filter-btn active" data-filter-type="status" data-filter-value="all">All</button>
+          <button class="filter-btn" data-filter-type="status" data-filter-value="not-started">Not Started</button>
+          <button class="filter-btn" data-filter-type="status" data-filter-value="running">In Progress</button>
+          <button class="filter-btn" data-filter-type="status" data-filter-value="paused">Paused</button>
+          <button class="filter-btn" data-filter-type="status" data-filter-value="completed">Completed</button>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">Priority:</span>
+          <button class="filter-btn active" data-filter-type="priority" data-filter-value="all">All</button>
+          <button class="filter-btn" data-filter-type="priority" data-filter-value="high">High</button>
+          <button class="filter-btn" data-filter-type="priority" data-filter-value="medium">Medium</button>
+          <button class="filter-btn" data-filter-type="priority" data-filter-value="low">Low</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tasks Main Section -->
+    <main class="tasks-section">
+      <div class="tasks-header">
+        <div class="tasks-title-wrapper">
+          <h2 class="tasks-title">Tasks</h2>
+          <span id="tasksCountBadge" class="tasks-counter">0 tasks</span>
+        </div>
+
+        <label class="select-all-box">
+          <input type="checkbox" id="selectAllCheckbox" style="accent-color: var(--accent-primary); width: 16px; height: 16px;">
+          <span>Select All</span>
+        </label>
+      </div>
+
+      <!-- Dynamic Task List Container -->
+      <div id="tasksListContainer" class="tasks-list">
+        <!-- Rendered dynamically by UIManager -->
+      </div>
+    </main>
+
+  </div><!-- /app-container -->
+
+  <!-- Floating Bulk Actions Bar -->
+  <div id="bulkActionBar" class="bulk-bar" role="toolbar" aria-label="Bulk actions">
+    <div class="bulk-info">
+      <span id="bulkSelectedCount" class="bulk-count">0</span>
+      <span>Selected</span>
+    </div>
+    <div class="bulk-actions">
+      <button id="btnBulkStart" class="btn btn-sm btn-start">▶ Start</button>
+      <button id="btnBulkPause" class="btn btn-sm btn-pause">⏸ Pause</button>
+      <button id="btnBulkComplete" class="btn btn-sm btn-end">✓ End</button>
+      <button id="btnBulkDelete" class="btn btn-sm btn-danger">🗑 Delete</button>
+      <button id="btnBulkDeselect" class="btn btn-sm btn-ghost">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Single Add Task Modal -->
+  <div id="modalSingleAdd" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalSingleAddTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalSingleAddTitle">Create New Task</h3>
+        <button class="btn-icon btn-ghost modal-close" data-modal="modalSingleAdd">✕</button>
+      </div>
+      <form id="formSingleAdd">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="taskTitleInput">Task Title *</label>
+            <input type="text" id="taskTitleInput" class="form-input" placeholder="What needs to be accomplished?" required autofocus>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="taskDescInput">Description / Notes (Optional)</label>
+            <textarea id="taskDescInput" class="form-textarea" placeholder="Add additional details, links, or context..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="taskPrioritySelect">Priority</label>
+              <select id="taskPrioritySelect" class="form-select">
+                <option value="medium" selected>Medium Priority</option>
+                <option value="high">🔥 High Priority</option>
+                <option value="low">🌱 Low Priority</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="taskReminderInput">Windows Reminder (Optional)</label>
+              <input type="datetime-local" id="taskReminderInput" class="form-input">
+            </div>
+          </div>
+
+          <!-- Admin user assignment selector (visible only if admin) -->
+          <div id="adminAssignUserRow" class="form-group" style="display: none;">
+            <label class="form-label" for="adminAssignUserSelect">Assign To User (Admin Override)</label>
+            <select id="adminAssignUserSelect" class="form-select"></select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost modal-close" data-modal="modalSingleAdd">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bulk Add Tasks Modal -->
+  <div id="modalBulkAdd" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalBulkAddTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalBulkAddTitle">Bulk Add Tasks</h3>
+        <button class="btn-icon btn-ghost modal-close" data-modal="modalBulkAdd">✕</button>
+      </div>
+      <form id="formBulkAdd">
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">
+            Enter multiple tasks at once. Place each task on a new line.<br>
+            <span style="color: var(--accent-secondary); font-size: 0.8rem;">Tip: Prefix with <code>[High]</code> or <code>[Low]</code> to set individual priorities!</span>
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="bulkTasksTextarea">Tasks List *</label>
+            <textarea id="bulkTasksTextarea" class="form-textarea" rows="8" placeholder="Draft sprint objectives
+[High] Deploy database migration
+Review code architecture with team
+[Low] Clean up workspace temp files" required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bulkDefaultPriority">Default Priority</label>
+              <select id="bulkDefaultPriority" class="form-select">
+                <option value="medium" selected>Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="low">Low Priority</option>
+              </select>
+            </div>
+
+            <!-- Admin user assignment selector -->
+            <div id="adminBulkAssignUserRow" class="form-group" style="display: none;">
+              <label class="form-label" for="adminBulkAssignUserSelect">Assign To User</label>
+              <select id="adminBulkAssignUserSelect" class="form-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost modal-close" data-modal="modalBulkAdd">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add All Tasks</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Auth / User Login & Register Modal -->
+  <div id="modalAuth" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAuthTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalAuthTitle">User Authentication</h3>
+        <button class="btn-icon btn-ghost modal-close" data-modal="modalAuth">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Auth Tabs (Login / Register) -->
+        <div class="admin-tabs">
+          <button type="button" class="admin-tab-btn active" id="tabAuthLogin">Log In</button>
+          <button type="button" class="admin-tab-btn" id="tabAuthRegister">Create Account</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="formLogin">
+          <div class="form-group">
+            <label class="form-label" for="loginUsername">Username</label>
+            <input type="text" id="loginUsername" class="form-input" placeholder="e.g. demo" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.85rem;">
+            <label class="form-label" for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+          </div>
+
+          <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Log In</button>
+          </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="formRegister" style="display: none;">
+          <div class="form-group">
+            <label class="form-label" for="regName">Full Name</label>
+            <input type="text" id="regName" class="form-input" placeholder="Your name or alias" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.85rem;">
+            <label class="form-label" for="regUsername">Username</label>
+            <input type="text" id="regUsername" class="form-input" placeholder="Choose unique handle" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.85rem;">
+            <label class="form-label" for="regPassword">Password</label>
+            <input type="password" id="regPassword" class="form-input" placeholder="At least 4 characters" required>
+          </div>
+
+          <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Management Panel Modal -->
+  <div id="modalAdmin" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAdminTitle">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="modalAdminTitle">🛡️ Admin Management Console</h3>
+        <button class="btn-icon btn-ghost modal-close" data-modal="modalAdmin">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="admin-tabs">
+          <button type="button" class="admin-tab-btn active" id="tabAdminUsers">User Management</button>
+          <button type="button" class="admin-tab-btn" id="tabAdminTasks">All System Tasks</button>
+        </div>
+
+        <!-- Tab 1: User Management -->
+        <div id="adminUsersSection">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h4 style="font-size: 1rem;">Registered System Users</h4>
+            <button id="btnToggleNewUserForm" class="btn btn-sm btn-secondary">+ Add User</button>
+          </div>
+
+          <!-- Admin Add User Sub-form -->
+          <div id="adminCreateUserCard" style="display: none; background: var(--bg-tertiary); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid var(--border-color);">
+            <form id="formAdminCreateUser">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="adminNewName">Full Name</label>
+                  <input type="text" id="adminNewName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="adminNewUsername">Username</label>
+                  <input type="text" id="adminNewUsername" class="form-input" required>
+                </div>
+              </div>
+              <div class="form-row" style="margin-top: 0.75rem;">
+                <div class="form-group">
+                  <label class="form-label" for="adminNewPassword">Password</label>
+                  <input type="password" id="adminNewPassword" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="adminNewRole">Role</label>
+                  <select id="adminNewRole" class="form-select">
+                    <option value="user">Standard User</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                <button type="button" id="btnCancelNewUser" class="btn btn-sm btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-sm btn-primary">Create User</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Users Table -->
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Tasks</th>
+                  <th>Joined</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody">
+                <!-- Injected via UI -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 2: All Tasks Management -->
+        <div id="adminTasksSection" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h4 style="font-size: 1rem;">Cross-User Task Directory</h4>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="filter-label">Filter by user:</span>
+              <select id="adminFilterByUserSelect" class="form-select" style="padding: 0.35rem 0.65rem; width: auto; font-size: 0.8rem;"></select>
+            </div>
+          </div>
+
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Task Title</th>
+                  <th>Assigned User</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Time Tracked</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="adminTasksTableBody">
+                <!-- Injected via UI -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Celebration Modal (When Task Ends/Completes) -->
+  <div id="modalCelebration" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card celebration-card">
+      <div class="celebration-emoji">🏆</div>
+      <h3 id="celebrationTitle" class="celebration-title">Outstanding Achievement!</h3>
+      <p id="celebrationTaskName" style="font-weight: 600; color: var(--text-main); font-size: 1.1rem;"></p>
+      
+      <div id="celebrationTimeSpent" class="timer-badge" style="margin: 0.5rem auto; font-size: 0.85rem; padding: 0.3rem 0.8rem;">
+        ⏱ Total Time: 00:00
+      </div>
+
+      <p id="celebrationQuote" class="celebration-quote"></p>
+      <span id="celebrationAuthor" style="font-size: 0.75rem; color: var(--accent-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;"></span>
+
+      <div style="margin-top: 1.5rem;">
+        <button id="btnCloseCelebration" class="btn btn-primary" style="min-width: 140px;">Keep Going! 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/task.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/motivation.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
